@@ -10,8 +10,8 @@ DATA=/opt/data
 # ── config.yaml ──────────────────────────────────────────────────────────────
 cat > "$DATA/config.yaml" << YAMLEOF
 model:
-  default: claude-sonnet-4-5
-  provider: anthropic
+  default: gemini/gemini-2.5-flash
+  provider: google
 agent:
   max_turns: 60
   gateway_timeout: 1800
@@ -52,12 +52,10 @@ chown hermes:hermes "$DATA/config.yaml"
 chmod 640 "$DATA/config.yaml"
 echo "[railway-bootstrap] Wrote $DATA/config.yaml"
 
-# ── SOUL.md — Finance persona (strip SKILL.md frontmatter) ───────────────────
-FINANCE_SKILL="/opt/data/skills/personal-finance/finance/SKILL.md"
-# Strip leading --- frontmatter block so SOUL.md is clean markdown
-awk '/^---/{if(NR==1){skip=1;next} if(skip){skip=0;next}} !skip' "$FINANCE_SKILL" > "$DATA/SOUL.md" 2>/dev/null || true
+# ── SOUL.md — always refresh from image (router soul in docker/SOUL.md) ──────
+cp /opt/hermes/docker/SOUL.md "$DATA/SOUL.md"
 chown hermes:hermes "$DATA/SOUL.md"
-echo "[railway-bootstrap] Wrote Finance persona to SOUL.md (stripped frontmatter)"
+echo "[railway-bootstrap] Refreshed SOUL.md from docker/SOUL.md"
 
 # ── Gmail MCP credentials (write once; OAuth refresh may update them) ─────────
 GMAIL_DIR="$DATA/.gmail-mcp"
