@@ -68,12 +68,9 @@ RUN set -eu; \
     curl -fsSL --retry 3 -o /tmp/s6-overlay-arch.tar.xz \
         "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${s6_arch}.tar.xz"; \
     { \
-        printf '%s  %s
-' "${S6_OVERLAY_NOARCH_SHA256}" /tmp/s6-overlay-noarch.tar.xz; \
-        printf '%s  %s
-' "${s6_arch_sha}" /tmp/s6-overlay-arch.tar.xz; \
-        printf '%s  %s
-' "${S6_OVERLAY_SYMLINKS_SHA256}" /tmp/s6-overlay-symlinks-noarch.tar.xz; \
+        printf '%s  %s\n' "${S6_OVERLAY_NOARCH_SHA256}" /tmp/s6-overlay-noarch.tar.xz; \
+        printf '%s  %s\n' "${s6_arch_sha}" /tmp/s6-overlay-arch.tar.xz; \
+        printf '%s  %s\n' "${S6_OVERLAY_SYMLINKS_SHA256}" /tmp/s6-overlay-symlinks-noarch.tar.xz; \
     } > /tmp/s6-overlay.sha256; \
     sha256sum -c /tmp/s6-overlay.sha256; \
     tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz; \
@@ -209,8 +206,7 @@ USER root
 RUN mkdir -p /opt/hermes/bin && \
     cp /opt/hermes/docker/hermes-exec-shim.sh /opt/hermes/bin/hermes && \
     chmod 0755 /opt/hermes/bin/hermes && \
-    printf 'docker
-' > /opt/hermes/.install_method && \
+    printf 'docker\n' > /opt/hermes/.install_method && \
     chown -R root:root /opt/hermes && \
     chmod -R a+rX /opt/hermes && \
     chmod -R a-w /opt/hermes
@@ -245,8 +241,7 @@ RUN mkdir -p /opt/hermes/bin && \
 ARG HERMES_GIT_SHA=
 RUN if [ -n "${HERMES_GIT_SHA}" ]; then \
         chmod u+w /opt/hermes && \
-        printf '%s
-' "${HERMES_GIT_SHA}" > /opt/hermes/.hermes_build_sha && \
+        printf '%s\n' "${HERMES_GIT_SHA}" > /opt/hermes/.hermes_build_sha && \
         chmod a-w /opt/hermes /opt/hermes/.hermes_build_sha; \
     fi
 
@@ -267,9 +262,7 @@ COPY docker/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
 # slots from $HERMES_HOME/profiles/<name>/ after a container restart
 # (the /run/service/ scandir is tmpfs and wiped on restart). Phase 4.
 RUN mkdir -p /etc/cont-init.d && \
-    printf '#!/command/with-contenv sh
-exec /opt/hermes/docker/stage2-hook.sh
-' \
+    printf '#!/command/with-contenv sh\nexec /opt/hermes/docker/stage2-hook.sh\n' \
         > /etc/cont-init.d/01-hermes-setup && \
     chmod +x /etc/cont-init.d/01-hermes-setup
 COPY --chmod=0755 docker/cont-init.d/015-supervise-perms /etc/cont-init.d/015-supervise-perms
