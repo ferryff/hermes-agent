@@ -316,6 +316,7 @@ ENV HERMES_DISABLE_LAZY_INSTALLS=1
 # every other consumer.
 ENV PATH="/opt/hermes/bin:/opt/hermes/.venv/bin:/opt/data/.local/bin:${PATH}"
 RUN mkdir -p /opt/data
+COPY --chmod=0755 docker/cont-init.d/03-railway-bootstrap /etc/cont-init.d/03-railway-bootstrap
 
 # s6-overlay's /init is PID 1. It sets up the supervision tree, runs
 # /etc/cont-init.d/* (our stage2 hook), starts s6-rc services
@@ -340,4 +341,4 @@ RUN mkdir -p /opt/data
 # exit code. Without the wrapper-as-ENTRYPOINT, leading-dash args
 # like `--version` would be intercepted by /init's POSIX shell.
 ENTRYPOINT [ "/init", "/opt/hermes/docker/main-wrapper.sh" ]
-CMD [ ]
+CMD [ "gateway", "run" ]

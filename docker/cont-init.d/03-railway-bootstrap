@@ -1,0 +1,70 @@
+#!/command/with-contenv sh
+# Bootstrap /opt/data config and credentials for Railway deployment.
+# Runs as root before s6 drops privileges.
+
+set -e
+
+DATA=/opt/data
+
+# ── config.yaml ──────────────────────────────────────────────────────────────
+if [ ! -f "$DATA/config.yaml" ]; then
+  mkdir -p "$DATA"
+  # Write config from env — interpolate key values directly
+  cat > "$DATA/config.yaml" << YAMLEOF
+model:
+  default: anthropic/claude-opus-4-5
+  provider: auto
+  base_url: https://openrouter.ai/api/v1
+agent:
+  max_turns: 60
+  gateway_timeout: 1800
+  reasoning_effort: medium
+terminal:
+  backend: local
+  env_passthrough:
+    - NOTION_API_KEY
+    - GOOGLE_API_KEY
+    - ANTHROPIC_API_KEY
+    - GMAIL_CLIENT_ID
+    - GMAIL_CLIENT_SECRET
+    - GMAIL_REFRESH_TOKEN
+approvals:
+  mode: manual
+  cron_mode: deny
+telegram:
+  reactions: false
+  channel_prompts: {}
+  allowed_chats: "${TELEGRAM_ALLOWED_USERS}"
+mcp_servers:
+  notion:
+    command: npx
+    args:
+      - -y
+      - "@notionhq/notion-mcp-server@1.9.1"
+    env:
+      OPENAPI_MCP_HEADERS: '{"Authorization": "Bearer ${NOTION_API_KEY}", "Notion-Version": "2022-06-28"}'
+  gmail_autoauth:
+    command: npx
+    args:
+      - -y
+      - "@gongrzhe/server-gmail-autoauth-mcp"
+    enabled: true
+_config_version: 29
+YAMLEOF
+  chown hermes:hermes "$DATA/config.yaml"
+  echo "[railway-bootstrap] Wrote $DATA/config.yaml"
+fi
+
+# ── Gmail MCP credentials ─────────────────────────────────────────────────────
+GMAIL_DIR="$DATA/.gmail-mcp"
+if [ -n "${GMAIL_CLIENT_ID}" ] && [ ! -f "$GMAIL_DIR/credentials.json" ]; then
+  mkdir -p "$GMAIL_DIR"
+  cat > "$GMAIL_DIR/gcp-oauth.keys.json" << JSONEOF
+{"installed":{"client_id":"${GMAIL_CLIENT_ID}","client_secret":"${GMAIL_CLIENT_SECRET}","redirect_uris":["http://localhost"],"auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}}
+JSONEOF
+  cat > "$GMAIL_DIR/credentials.json" << JSONEOF
+{"refresh_token":"${GMAIL_REFRESH_TOKEN}"}
+JSONEOF
+  chown -R hermes:hermes "$GMAIL_DIR"
+  echo "[railway-bootstrap] Wrote Gmail MCP credentials"
+fi
