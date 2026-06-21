@@ -1,16 +1,14 @@
 #!/command/with-contenv sh
 # Bootstrap /opt/data config and credentials for Railway deployment.
-# Runs as root before s6 drops privileges.
+# Runs as root after stage2-hook has seeded the volume.
+# Always overwrites config.yaml (seeded from example above; we need Railway values).
 
 set -e
 
 DATA=/opt/data
 
 # ── config.yaml ──────────────────────────────────────────────────────────────
-if [ ! -f "$DATA/config.yaml" ]; then
-  mkdir -p "$DATA"
-  # Write config from env — interpolate key values directly
-  cat > "$DATA/config.yaml" << YAMLEOF
+cat > "$DATA/config.yaml" << YAMLEOF
 model:
   default: anthropic/claude-opus-4-5
   provider: auto
@@ -51,13 +49,14 @@ mcp_servers:
     enabled: true
 _config_version: 29
 YAMLEOF
-  chown hermes:hermes "$DATA/config.yaml"
-  echo "[railway-bootstrap] Wrote $DATA/config.yaml"
-fi
+chown hermes:hermes "$DATA/config.yaml"
+chmod 640 "$DATA/config.yaml"
+echo "[railway-bootstrap] Wrote $DATA/config.yaml"
 
-# ── Gmail MCP credentials ─────────────────────────────────────────────────────
+# ── Gmail MCP credentials (write once; OAuth refresh may update them) ─────────
 GMAIL_DIR="$DATA/.gmail-mcp"
-if [ -n "${GMAIL_CLIENT_ID}" ] && [ ! -f "$GMAIL_DIR/credentials.json" ]; then
+MARKER="$DATA/.railway-gmail-seeded"
+if [ -n "${GMAIL_CLIENT_ID}" ] && [ ! -f "$MARKER" ]; then
   mkdir -p "$GMAIL_DIR"
   cat > "$GMAIL_DIR/gcp-oauth.keys.json" << JSONEOF
 {"installed":{"client_id":"${GMAIL_CLIENT_ID}","client_secret":"${GMAIL_CLIENT_SECRET}","redirect_uris":["http://localhost"],"auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}}
@@ -66,5 +65,7 @@ JSONEOF
 {"refresh_token":"${GMAIL_REFRESH_TOKEN}"}
 JSONEOF
   chown -R hermes:hermes "$GMAIL_DIR"
+  touch "$MARKER"
+  chown hermes:hermes "$MARKER"
   echo "[railway-bootstrap] Wrote Gmail MCP credentials"
 fi
