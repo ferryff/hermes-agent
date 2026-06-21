@@ -52,6 +52,12 @@ chown hermes:hermes "$DATA/config.yaml"
 chmod 640 "$DATA/config.yaml"
 echo "[railway-bootstrap] Wrote $DATA/config.yaml"
 
+# ── SOUL.md → symlink to Finance skill (always in sync, no duplication) ──────
+FINANCE_SKILL="/opt/data/skills/personal-finance/finance/SKILL.md"
+rm -f "$DATA/SOUL.md"
+ln -sf "$FINANCE_SKILL" "$DATA/SOUL.md"
+echo "[railway-bootstrap] SOUL.md → $FINANCE_SKILL"
+
 # ── Gmail MCP credentials (write once; OAuth refresh may update them) ─────────
 GMAIL_DIR="$DATA/.gmail-mcp"
 MARKER="$DATA/.railway-gmail-seeded"
