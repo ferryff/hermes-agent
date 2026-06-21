@@ -27,7 +27,7 @@ terminal:
     - GMAIL_REFRESH_TOKEN
 approvals:
   mode: manual
-  cron_mode: deny
+  cron_mode: auto
 telegram:
   reactions: false
   channel_prompts: {}
