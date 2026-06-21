@@ -46,6 +46,11 @@ mcp_servers:
       - -y
       - "@gongrzhe/server-gmail-autoauth-mcp"
     enabled: true
+dashboard:
+  basic_auth:
+    username: ferry
+    password: "${HERMES_DASHBOARD_PASSWORD}"
+    secret: "${HERMES_DASHBOARD_SECRET}"
 _config_version: 29
 YAMLEOF
 chown hermes:hermes "$DATA/config.yaml"
