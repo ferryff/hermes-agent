@@ -10,7 +10,7 @@ DATA=/opt/data
 # ── config.yaml ──────────────────────────────────────────────────────────────
 cat > "$DATA/config.yaml" << YAMLEOF
 model:
-  default: gemini/gemini-2.5-flash
+  default: gemini/gemini-2.5-pro
   provider: google
 agent:
   max_turns: 60
