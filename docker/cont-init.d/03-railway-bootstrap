@@ -10,9 +10,8 @@ DATA=/opt/data
 # ── config.yaml ──────────────────────────────────────────────────────────────
 cat > "$DATA/config.yaml" << YAMLEOF
 model:
-  default: anthropic/claude-opus-4-5
-  provider: auto
-  base_url: https://openrouter.ai/api/v1
+  default: claude-sonnet-4-5
+  provider: anthropic
 agent:
   max_turns: 60
   gateway_timeout: 1800
