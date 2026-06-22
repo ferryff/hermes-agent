@@ -15,7 +15,7 @@ model:
 agent:
   max_turns: 60
   gateway_timeout: 1800
-  reasoning_effort: low
+  reasoning_effort: medium
 terminal:
   backend: local
   env_passthrough:
