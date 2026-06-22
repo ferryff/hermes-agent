@@ -1,1 +1,118 @@
+#!/command/with-contenv sh
+# Bootstrap /opt/data config and credentials for Railway deployment.
+# Runs as root after stage2-hook has seeded the volume.
+# Always overwrites config.yaml (seeded from example above; we need Railway values).
 
+set -e
+
+DATA=/opt/data
+
+# ── config.yaml ──────────────────────────────────────────────────────────────
+cat > "$DATA/config.yaml" << 'YAMLEOF'
+model:
+  default: gemini/gemini-2.5-pro
+  provider: google
+agent:
+  max_turns: 60
+  gateway_timeout: 1800
+  reasoning_effort: medium
+terminal:
+  backend: local
+  env_passthrough:
+    - NOTION_API_KEY
+    - GOOGLE_API_KEY
+    - ANTHROPIC_API_KEY
+    - GMAIL_CLIENT_ID
+    - GMAIL_CLIENT_SECRET
+    - GMAIL_REFRESH_TOKEN
+approvals:
+  mode: manual
+  cron_mode: auto
+telegram:
+  reactions: false
+  channel_prompts: {}
+  allowed_chats: "${TELEGRAM_ALLOWED_USERS}"
+mcp_servers:
+  notion:
+    command: npx
+    args:
+      - -y
+      - "@notionhq/notion-mcp-server@1.9.1"
+    env:
+      OPENAPI_MCP_HEADERS: '{"Authorization": "Bearer ${NOTION_API_KEY}", "Notion-Version": "2022-06-28"}'
+  gmail_autoauth:
+    command: npx
+    args:
+      - -y
+      - "@gongrzhe/server-gmail-autoauth-mcp"
+    enabled: true
+dashboard:
+  basic_auth:
+    username: ferry
+    password: "${HERMES_DASHBOARD_PASSWORD}"
+    secret: "${HERMES_DASHBOARD_SECRET}"
+_config_version: 29
+YAMLEOF
+chown hermes:hermes "$DATA/config.yaml"
+chmod 640 "$DATA/config.yaml"
+echo "[railway-bootstrap] Wrote $DATA/config.yaml"
+
+# ── SOUL.md — always refresh from image (router soul in docker/SOUL.md) ──────
+cp /opt/hermes/docker/SOUL.md "$DATA/SOUL.md"
+chown hermes:hermes "$DATA/SOUL.md"
+echo "[railway-bootstrap] Refreshed SOUL.md from docker/SOUL.md"
+
+# ── Gmail MCP credentials (write once; OAuth refresh may update them) ─────────
+GMAIL_DIR="$DATA/.gmail-mcp"
+MARKER="$DATA/.railway-gmail-seeded"
+if [ -n "${GMAIL_CLIENT_ID}" ] && [ ! -f "$MARKER" ]; then
+  mkdir -p "$GMAIL_DIR"
+  cat > "$GMAIL_DIR/gcp-oauth.keys.json" << JSONEOF
+{"installed":{"client_id":"${GMAIL_CLIENT_ID}","client_secret":"${GMAIL_CLIENT_SECRET}","redirect_uris":["http://localhost"],"auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}}
+JSONEOF
+  cat > "$GMAIL_DIR/credentials.json" << JSONEOF
+{"refresh_token":"${GMAIL_REFRESH_TOKEN}"}
+JSONEOF
+  chown -R hermes:hermes "$GMAIL_DIR"
+  touch "$MARKER"
+  chown hermes:hermes "$MARKER"
+  echo "[railway-bootstrap] Wrote Gmail MCP credentials"
+fi
+
+# ── qmd knowledge base (install + embed once) ────────────────────────────────
+QMD_MARKER="$DATA/.railway-qmd-seeded"
+KNOWLEDGE_SRC="/opt/hermes/knowledge"
+KNOWLEDGE_DST="$DATA/knowledge"
+QMD_CACHE="$DATA/qmd-cache"
+
+if [ ! -f "$QMD_MARKER" ]; then
+  echo "[railway-bootstrap] Setting up qmd knowledge base..."
+
+  # Install qmd globally
+  npm install -g @tobilu/qmd 2>&1 | tail -3
+
+  # Copy knowledge markdown files from image to Volume
+  mkdir -p "$KNOWLEDGE_DST"
+  cp "$KNOWLEDGE_SRC"/*.md "$KNOWLEDGE_DST/"
+  chown -R hermes:hermes "$KNOWLEDGE_DST"
+
+  # Point qmd cache to Volume so index survives redeploys
+  export QMD_CACHE_DIR="$QMD_CACHE"
+  mkdir -p "$QMD_CACHE"
+
+  # Add collection and embed (runs as hermes user to own the index)
+  su -s /bin/sh hermes -c "
+    export QMD_CACHE_DIR=$QMD_CACHE
+    export HOME=/opt/data
+    qmd collection add $KNOWLEDGE_DST --name coaching-books
+    qmd context add qmd://coaching-books 'Books on habits, focus, and personal performance for coaching'
+    qmd embed
+  "
+
+  chown -R hermes:hermes "$QMD_CACHE"
+  touch "$QMD_MARKER"
+  chown hermes:hermes "$QMD_MARKER"
+  echo "[railway-bootstrap] qmd knowledge base ready"
+else
+  echo "[railway-bootstrap] qmd already seeded, skipping"
+fi
