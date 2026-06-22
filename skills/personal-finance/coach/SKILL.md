@@ -68,7 +68,7 @@ One question or micro-challenge to carry into the day. Specific. Requires a resp
 Triggered when: no active week program exists for the current ISO week (gate fires every morning until resolved).
 
 1. Send: *"What's your focus this week?"*
-2. If Ferry provides a priority → `qmd search` for relevant frameworks → propose a week program (focus, framework, cadence, daily challenges) → wait for Ferry to approve or adjust → save to Notion (see "Notion: Create week program" below)
+2. If Ferry provides a priority → `HOME=/opt/data qmd query "<priority> framework" | head -40` for relevant frameworks → propose a week program (focus, framework, cadence, daily challenges) → wait for Ferry to approve or adjust → save to Notion (see "Notion: Create week program" below)
 3. If no priority given → pick the most contextually relevant chapter from recent memory + book coverage → propose a light week program → save on approval
 4. Once the program row is saved with `Status = Active` for this ISO week, normal mornings resume tomorrow
 
