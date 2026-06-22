@@ -114,11 +114,3 @@ if [ ! -f "$QMD_MARKER" ]; then
   chown hermes:hermes "$QMD_MARKER"
   echo "[railway-bootstrap] qmd knowledge base ready"
 fi
-
-# ── Ensure hermes shell env always has HOME=/opt/data (needed for qmd) ───────
-BASHRC="$DATA/.bashrc"
-if ! grep -q 'export HOME=/opt/data' "$BASHRC" 2>/dev/null; then
-  echo 'export HOME=/opt/data' >> "$BASHRC"
-  chown hermes:hermes "$BASHRC"
-  echo "[railway-bootstrap] Wrote HOME=/opt/data to $BASHRC"
-fi
