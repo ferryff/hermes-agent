@@ -20,7 +20,7 @@ Query Week Programs DB for the current ISO week with `Status = Active` (see "Not
 Recall recent daily logs, mood, commitments, and follow-through from Hermes memory.
 
 **Step 3 — Book content (when needed)**
-If Beat 2 or a question requires a specific framework or insight, search the knowledge base with `HOME=/opt/data qmd search "<specific query>"`. Never fabricate content — if qmd returns nothing, say you don't have the relevant content loaded yet rather than inventing a citation.
+If Beat 2 or a question requires a specific framework or insight, search the knowledge base with `HOME=/opt/data qmd query "<specific query>" | head -40`. Never fabricate content — if qmd returns nothing, say you don't have the relevant content loaded yet rather than inventing a citation.
 
 ---
 
@@ -58,7 +58,7 @@ One question or micro-challenge to carry into the day. Specific. Requires a resp
 - Never summarise his goals back to him
 - Never give three things — one idea only
 - Always ground Beat 1 in real memory data, not fabricated context
-- Beat 2 must come from `HOME=/opt/data qmd query "..."` — if qmd unavailable, omit the citation and note it
+- Beat 2 must come from `HOME=/opt/data qmd query "..." | head -40` — if qmd unavailable, omit the citation and note it
 - End with a question or challenge, never encouragement
 
 ---
