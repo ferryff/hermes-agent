@@ -79,17 +79,18 @@ JSONEOF
   echo "[railway-bootstrap] Wrote Gmail MCP credentials"
 fi
 
-# ── qmd knowledge base (install + embed once) ────────────────────────────────
+# ── qmd: install on every start, embed only once ─────────────────────────────
 QMD_MARKER="$DATA/.railway-qmd-seeded"
 KNOWLEDGE_SRC="/opt/hermes/knowledge"
 KNOWLEDGE_DST="$DATA/knowledge"
 QMD_CACHE="$DATA/qmd-cache"
 
-if [ ! -f "$QMD_MARKER" ]; then
-  echo "[railway-bootstrap] Setting up qmd knowledge base..."
+# Always reinstall qmd — binary lives in the container, not the Volume
+npm install -g @tobilu/qmd 2>&1 | tail -3
+echo "[railway-bootstrap] qmd installed"
 
-  # Install qmd globally
-  npm install -g @tobilu/qmd 2>&1 | tail -3
+if [ ! -f "$QMD_MARKER" ]; then
+  echo "[railway-bootstrap] Setting up qmd knowledge base (first time)..."
 
   # Copy knowledge markdown files from image to Volume
   mkdir -p "$KNOWLEDGE_DST"
@@ -97,7 +98,6 @@ if [ ! -f "$QMD_MARKER" ]; then
   chown -R hermes:hermes "$KNOWLEDGE_DST"
 
   # Point qmd cache to Volume so index survives redeploys
-  export QMD_CACHE_DIR="$QMD_CACHE"
   mkdir -p "$QMD_CACHE"
 
   # Add collection and embed (runs as hermes user to own the index)
@@ -113,6 +113,8 @@ if [ ! -f "$QMD_MARKER" ]; then
   touch "$QMD_MARKER"
   chown hermes:hermes "$QMD_MARKER"
   echo "[railway-bootstrap] qmd knowledge base ready"
+else
+  echo "[railway-bootstrap] qmd already seeded, skipping embed"
 fi
 
 # ── Coach cron jobs (seed once) ───────────────────────────────────────────────
