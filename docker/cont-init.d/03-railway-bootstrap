@@ -14,17 +14,17 @@ model:
   provider: google
 auxiliary:
   compression:
-    provider: gemini
-    model: gemini-2.5-flash
+    provider: auto
+    model: gemini/gemini-2.5-flash
   web_extract:
-    provider: gemini
-    model: gemini-2.5-flash
+    provider: auto
+    model: gemini/gemini-2.5-flash
   approval:
-    provider: gemini
-    model: gemini-2.5-flash
+    provider: auto
+    model: gemini/gemini-2.5-flash
   title_generation:
-    provider: gemini
-    model: gemini-2.5-flash
+    provider: auto
+    model: gemini/gemini-2.5-flash
 agent:
   max_turns: 20
   gateway_timeout: 1800
