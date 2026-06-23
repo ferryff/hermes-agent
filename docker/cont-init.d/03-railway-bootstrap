@@ -10,12 +10,12 @@ DATA=/opt/data
 # ── config.yaml ──────────────────────────────────────────────────────────────
 cat > "$DATA/config.yaml" << 'YAMLEOF'
 model:
-  default: gemini/gemini-2.5-pro
+  default: gemini/gemini-2.5-flash
   provider: google
 agent:
-  max_turns: 60
+  max_turns: 20
   gateway_timeout: 1800
-  reasoning_effort: medium
+  reasoning_effort: low
 terminal:
   backend: local
   env_passthrough:
@@ -121,42 +121,118 @@ fi
 CRON_MARKER="$DATA/.railway-cron-seeded"
 CRON_FILE="$DATA/cron/jobs.json"
 
+# Failsafe: if jobs.json exists but schedule is a string (old format), wipe and reseed
+if [ -f "$CRON_FILE" ] && python3 -c "
+import json,sys
+jobs = json.load(open('$CRON_FILE'))
+all_jobs = jobs.get('jobs', jobs) if isinstance(jobs, dict) else jobs
+bad = [j for j in all_jobs if isinstance(j.get('schedule'), str)]
+sys.exit(0 if bad else 1)
+" 2>/dev/null; then
+  echo "[railway-bootstrap] Detected old cron format — reseeding..."
+  rm -f "$CRON_MARKER"
+fi
+
 if [ ! -f "$CRON_MARKER" ]; then
   echo "[railway-bootstrap] Seeding Coach cron jobs..."
   mkdir -p "$DATA/cron"
-  cat > "$CRON_FILE" << 'CRONEOF'
-[
-  {
-    "id": "coach-morning-gate",
-    "name": "Coach Morning Gate",
-    "schedule": "0 23 * * *",
-    "prompt": "Run the coach skill morning gate: check for an active week program in Notion for the current ISO week. If found, send the 3-beat morning message. If not found, run the Monday check-in flow.",
-    "skills": ["coach"],
-    "deliver": "telegram",
-    "enabled": true,
-    "state": "scheduled"
-  },
-  {
-    "id": "coach-evening-checkin",
-    "name": "Coach Evening Check-in",
-    "schedule": "0 12 * * *",
-    "prompt": "Run the coach skill evening check-in: load the current week program cadence, check if today is a check-in day, and if so send one tailored question. Skip silently if not a check-in day.",
-    "skills": ["coach"],
-    "deliver": "telegram",
-    "enabled": true,
-    "state": "scheduled"
-  },
-  {
-    "id": "coach-sunday-review",
-    "name": "Coach Sunday Review",
-    "schedule": "0 12 * * 0",
-    "prompt": "Run the coach skill Sunday week-in-review: send a light reflection on the week's progress (one observation, one thing to carry into Monday), then mark the current week program Completed in Notion.",
-    "skills": ["coach"],
-    "deliver": "telegram",
-    "enabled": true,
-    "state": "scheduled"
-  }
-]
+  NOW=$(date -u +"%Y-%m-%dT%H:%M:%S.000000+00:00")
+  cat > "$CRON_FILE" << CRONEOF
+{
+  "jobs": [
+    {
+      "id": "coach-morning-gate",
+      "name": "Coach Morning Gate",
+      "prompt": "Run the coach skill morning gate: check for an active week program in Notion for the current ISO week. If found, send the 3-beat morning message. If not found, run the Monday check-in flow.",
+      "skills": ["coach"],
+      "skill": "coach",
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {"kind": "cron", "expr": "0 23 * * *", "display": "0 23 * * *"},
+      "schedule_display": "0 23 * * *",
+      "repeat": {"times": null, "completed": 0},
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "${NOW}",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "telegram",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null
+    },
+    {
+      "id": "coach-evening-checkin",
+      "name": "Coach Evening Check-in",
+      "prompt": "Run the coach skill evening check-in: load the current week program cadence, check if today is a check-in day, and if so send one tailored question. Skip silently if not a check-in day.",
+      "skills": ["coach"],
+      "skill": "coach",
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {"kind": "cron", "expr": "0 12 * * *", "display": "0 12 * * *"},
+      "schedule_display": "0 12 * * *",
+      "repeat": {"times": null, "completed": 0},
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "${NOW}",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "telegram",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null
+    },
+    {
+      "id": "coach-sunday-review",
+      "name": "Coach Sunday Review",
+      "prompt": "Run the coach skill Sunday week-in-review: send a light reflection on the week's progress (one observation, one thing to carry into Monday), then mark the current week program Completed in Notion.",
+      "skills": ["coach"],
+      "skill": "coach",
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {"kind": "cron", "expr": "0 12 * * 0", "display": "0 12 * * 0"},
+      "schedule_display": "0 12 * * 0",
+      "repeat": {"times": null, "completed": 0},
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "${NOW}",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "telegram",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null
+    }
+  ],
+  "updated_at": "${NOW}"
+}
 CRONEOF
   chown hermes:hermes "$CRON_FILE"
   touch "$CRON_MARKER"
