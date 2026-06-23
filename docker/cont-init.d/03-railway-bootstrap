@@ -10,7 +10,7 @@ DATA=/opt/data
 # ── config.yaml ──────────────────────────────────────────────────────────────
 cat > "$DATA/config.yaml" << 'YAMLEOF'
 model:
-  default: gemini/gemini-2.5-flash
+  default: gemini/gemini-2.5-pro
   provider: google
 agent:
   max_turns: 20
@@ -88,6 +88,15 @@ QMD_CACHE="$DATA/qmd-cache"
 # Always reinstall qmd — binary lives in the container, not the Volume
 npm install -g @tobilu/qmd 2>&1 | tail -3
 echo "[railway-bootstrap] qmd installed"
+
+# Pre-warm the embedding model — runs on every start so first Felix query is fast
+# Uses a dummy query; model downloads to container cache (~60s on cold start, instant after)
+su -s /bin/sh hermes -c "
+  export QMD_CACHE_DIR=$QMD_CACHE
+  export HOME=/opt/data
+  timeout 120 qmd query 'warmup habits' >/dev/null 2>&1 || true
+"
+echo "[railway-bootstrap] qmd model warm"
 
 if [ ! -f "$QMD_MARKER" ]; then
   echo "[railway-bootstrap] Setting up qmd knowledge base (first time)..."
