@@ -79,6 +79,10 @@ JSONEOF
   echo "[railway-bootstrap] Wrote Gmail MCP credentials"
 fi
 
+# ── System packages ───────────────────────────────────────────────────────────
+apt-get install -y -q poppler-utils 2>&1 | tail -2
+echo "[railway-bootstrap] poppler-utils installed"
+
 # ── qmd: install on every start, embed only once ─────────────────────────────
 QMD_MARKER="$DATA/.railway-qmd-seeded"
 KNOWLEDGE_SRC="/opt/hermes/knowledge"
