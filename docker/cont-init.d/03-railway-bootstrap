@@ -143,127 +143,76 @@ else
   echo "[railway-bootstrap] qmd already seeded, skipping embed"
 fi
 
-# ── Coach cron jobs (seed once) ───────────────────────────────────────────────
-CRON_MARKER="$DATA/.railway-cron-seeded"
-CRON_FILE="$DATA/cron/jobs.json"
+# ── Coach cron jobs — disabled ────────────────────────────────────────────────
+# Coach crons removed. Finance daily summary is seeded below.
 
-# Failsafe: if jobs.json exists but schedule is a string (old format), wipe and reseed
-if [ -f "$CRON_FILE" ] && python3 -c "
-import json,sys
-jobs = json.load(open('$CRON_FILE'))
-all_jobs = jobs.get('jobs', jobs) if isinstance(jobs, dict) else jobs
-bad = [j for j in all_jobs if isinstance(j.get('schedule'), str)]
-sys.exit(0 if bad else 1)
-" 2>/dev/null; then
-  echo "[railway-bootstrap] Detected old cron format — reseeding..."
-  rm -f "$CRON_MARKER"
-fi
+# ── Finance cron jobs (seed once) ─────────────────────────────────────────────
+FINANCE_CRON_MARKER="$DATA/.railway-finance-cron-seeded"
 
-if [ ! -f "$CRON_MARKER" ]; then
-  echo "[railway-bootstrap] Seeding Coach cron jobs..."
+if [ ! -f "$FINANCE_CRON_MARKER" ]; then
+  echo "[railway-bootstrap] Seeding Finance cron jobs..."
   mkdir -p "$DATA/cron"
   NOW=$(date -u +"%Y-%m-%dT%H:%M:%S.000000+00:00")
-  cat > "$CRON_FILE" << CRONEOF
-{
-  "jobs": [
-    {
-      "id": "coach-morning-gate",
-      "name": "Coach Morning Gate",
-      "prompt": "Run the coach skill morning gate: check for an active week program in Notion for the current ISO week. If found, send the 3-beat morning message. If not found, run the Monday check-in flow.",
-      "skills": ["coach"],
-      "skill": "coach",
-      "model": null,
-      "provider": null,
-      "base_url": null,
-      "script": null,
-      "no_agent": false,
-      "context_from": null,
-      "schedule": {"kind": "cron", "expr": "0 23 * * *", "display": "0 23 * * *"},
-      "schedule_display": "0 23 * * *",
-      "repeat": {"times": null, "completed": 0},
-      "enabled": true,
-      "state": "scheduled",
-      "paused_at": null,
-      "paused_reason": null,
-      "created_at": "${NOW}",
-      "next_run_at": null,
-      "last_run_at": null,
-      "last_status": null,
-      "last_error": null,
-      "last_delivery_error": null,
-      "deliver": "telegram",
-      "origin": null,
-      "enabled_toolsets": null,
-      "workdir": null
-    },
-    {
-      "id": "coach-evening-checkin",
-      "name": "Coach Evening Check-in",
-      "prompt": "Run the coach skill evening check-in: load the current week program cadence, check if today is a check-in day, and if so send one tailored question. Skip silently if not a check-in day.",
-      "skills": ["coach"],
-      "skill": "coach",
-      "model": null,
-      "provider": null,
-      "base_url": null,
-      "script": null,
-      "no_agent": false,
-      "context_from": null,
-      "schedule": {"kind": "cron", "expr": "0 12 * * *", "display": "0 12 * * *"},
-      "schedule_display": "0 12 * * *",
-      "repeat": {"times": null, "completed": 0},
-      "enabled": true,
-      "state": "scheduled",
-      "paused_at": null,
-      "paused_reason": null,
-      "created_at": "${NOW}",
-      "next_run_at": null,
-      "last_run_at": null,
-      "last_status": null,
-      "last_error": null,
-      "last_delivery_error": null,
-      "deliver": "telegram",
-      "origin": null,
-      "enabled_toolsets": null,
-      "workdir": null
-    },
-    {
-      "id": "coach-sunday-review",
-      "name": "Coach Sunday Review",
-      "prompt": "Run the coach skill Sunday week-in-review: send a light reflection on the week's progress (one observation, one thing to carry into Monday), then mark the current week program Completed in Notion.",
-      "skills": ["coach"],
-      "skill": "coach",
-      "model": null,
-      "provider": null,
-      "base_url": null,
-      "script": null,
-      "no_agent": false,
-      "context_from": null,
-      "schedule": {"kind": "cron", "expr": "0 12 * * 0", "display": "0 12 * * 0"},
-      "schedule_display": "0 12 * * 0",
-      "repeat": {"times": null, "completed": 0},
-      "enabled": true,
-      "state": "scheduled",
-      "paused_at": null,
-      "paused_reason": null,
-      "created_at": "${NOW}",
-      "next_run_at": null,
-      "last_run_at": null,
-      "last_status": null,
-      "last_error": null,
-      "last_delivery_error": null,
-      "deliver": "telegram",
-      "origin": null,
-      "enabled_toolsets": null,
-      "workdir": null
-    }
-  ],
-  "updated_at": "${NOW}"
+
+  # Merge finance job into existing jobs.json
+  python3 - << 'PYEOF'
+import json, os
+
+CRON_FILE = "/opt/data/cron/jobs.json"
+NOW = os.popen("date -u +'%Y-%m-%dT%H:%M:%S.000000+00:00'").read().strip()
+
+finance_job = {
+  "id": "finance-daily-summary",
+  "name": "Finance Daily Summary",
+  "prompt": "Today is $(date +'%d %B %Y'). Run the finance skill daily summary: query today's expenses and month-to-date total from Notion. Send to Telegram using the format: no spending → 'No spending logged today ✓\\nMonth so far: $XX.XX', has spending → list each transaction as '{card} — {merchant} ${amount}' then 'Total today: $XX.XX\\nMonth so far: $XX.XX'.",
+  "skills": ["finance", "spending-tracker"],
+  "skill": "finance",
+  "model": None,
+  "provider": None,
+  "base_url": None,
+  "script": None,
+  "no_agent": False,
+  "context_from": None,
+  "schedule": {"kind": "cron", "expr": "0 14 * * *", "display": "0 14 * * *"},
+  "schedule_display": "0 14 * * *",
+  "repeat": {"times": None, "completed": 0},
+  "enabled": True,
+  "state": "scheduled",
+  "paused_at": None,
+  "paused_reason": None,
+  "created_at": NOW,
+  "next_run_at": None,
+  "last_run_at": None,
+  "last_status": None,
+  "last_error": None,
+  "last_delivery_error": None,
+  "deliver": "telegram",
+  "origin": None,
+  "enabled_toolsets": None,
+  "workdir": None
 }
-CRONEOF
+
+if os.path.exists(CRON_FILE):
+  with open(CRON_FILE) as f:
+    data = json.load(f)
+  jobs = data.get("jobs", [])
+  # Remove existing finance-daily-summary if present (idempotent)
+  jobs = [j for j in jobs if j.get("id") != "finance-daily-summary"]
+  jobs.append(finance_job)
+  data["jobs"] = jobs
+  data["updated_at"] = NOW
+else:
+  data = {"jobs": [finance_job], "updated_at": NOW}
+
+with open(CRON_FILE, "w") as f:
+  json.dump(data, f, indent=2)
+print("[railway-bootstrap] Finance daily summary cron added")
+PYEOF
+
   chown hermes:hermes "$CRON_FILE"
-  touch "$CRON_MARKER"
-  chown hermes:hermes "$CRON_MARKER"
-  echo "[railway-bootstrap] Coach cron jobs seeded"
+  touch "$FINANCE_CRON_MARKER"
+  chown hermes:hermes "$FINANCE_CRON_MARKER"
+  echo "[railway-bootstrap] Finance cron jobs seeded"
 else
-  echo "[railway-bootstrap] Cron jobs already seeded, skipping"
+  echo "[railway-bootstrap] Finance cron already seeded, skipping"
 fi
